@@ -1,0 +1,13 @@
+{
+  "name": "v-coralhuang_25_11_14_case1",
+  "version": "1.0.0",
+  "description": "Minimal project that fixes a buggy MUI example and includes cross-platform tests",
+  "scripts": {
+    "setup": "node setup.js",
+    "test": "node test-runner.js"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0"
+  },
+  "type": "module"
+}

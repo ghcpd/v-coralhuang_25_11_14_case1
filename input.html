@@ -85,6 +85,7 @@
       function BuggyMUIExample() {
         const [value, setValue] = React.useState(null);
         const [inputValue, setInputValue] = React.useState("");
+        const inputRef = React.useRef(null);
 
         return (
           <Box
@@ -133,7 +134,7 @@
               */}
               <Tooltip title="Delete">
                 <IconButton
-                  aria-label="Delete current item"
+                  aria-label="Delete"
                   onClick={() => {
                     console.log("Delete icon clicked");
                   }}
@@ -169,6 +170,7 @@
                 value={value}
                 onChange={(_, newValue) => {
                   setValue(newValue);
+                  setInputValue(newValue ?? "");
                 }}
                 inputValue={inputValue}
                 onInputChange={(_, newInputValue, reason) => {
@@ -185,12 +187,25 @@
                 renderInput={(params) => (
                   <TextField
                     {...params}
+                    inputRef={(el) => {
+                      const ref = params.inputProps.ref;
+                      if (typeof ref === 'function') {
+                        ref(el);
+                      } else if (ref) {
+                        ref.current = el;
+                      }
+                      inputRef.current = el;
+                    }}
                     label="Pick an option"
                     onBlur={() => {
                       console.log("Autocomplete blur");
                     }}
                     onFocus={() => {
                       console.log("Autocomplete focus");
+                      if (inputRef.current) {
+                        const len = (inputRef.current.value || '').length;
+                        inputRef.current.setSelectionRange(len, len);
+                      }
                     }}
                   />
                 )}
