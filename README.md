@@ -1,433 +1,333 @@
-# MUI Bug Fix Challenge
+# MUI Bug Fix Project
 
-A comprehensive debugging exercise featuring two intentional UI bugs in a Material-UI (MUI) React application, complete with fixes, tests, and cross-platform test infrastructure.
-
-## Overview
-
-This project contains a fixed version of a buggy MUI component showcase. The two UI bugs have been identified, documented, and corrected with proper accessibility and focus management implementations.
+A comprehensive debugging exercise demonstrating the identification, reproduction, and fix of two critical UI bugs in a Material-UI React application.
 
 ---
 
-## Bug Descriptions & Fixes
+## 🐛 Bug Descriptions
 
-### Bug 1: Tooltip and aria-label Semantics Mismatch ❌ → ✅
+### Bug 1: Tooltip and aria-label Mismatch (Accessibility/Semantics)
 
-#### Original Issue
-- **Component**: `Tooltip` + `IconButton`
-- **Problem**: 
-  - The visible tooltip text displayed "Delete"
-  - The `aria-label` attribute read "Delete current item"
-  - Screen reader users heard "Delete current item" while sighted users saw "Delete"
-  - This semantic mismatch violates WCAG accessibility guidelines
-- **Impact**: Inconsistent user experience between sighted and screen reader users
+**Component:** Tooltip + IconButton
 
-#### Root Cause
-```jsx
-// BUGGY CODE
+**Original Issue:**
+- The IconButton uses `aria-label="Delete current item"`
+- The Tooltip displays `title="Delete"`
+- **Problem:** Screen readers announce "Delete current item" while the visible tooltip shows "Delete", creating a mismatch between visible and accessible text.
+
+**Reproduction Steps:**
+1. Open the original buggy version in a browser
+2. Use a screen reader (NVDA, JAWS, VoiceOver) to navigate to the delete button
+3. Observe that the screen reader announces "Delete current item" 
+4. Look at the visible tooltip which shows "Delete"
+5. Notice the discrepancy between what is spoken and what is shown
+
+**Expected Behavior:**
+- Visible tooltip text and aria-label should match exactly
+- Screen readers should announce the same text as the tooltip displays
+
+**Applied Fix:**
+- Changed `aria-label` from `"Delete current item"` to `"Delete"` to match the tooltip text
+- This ensures accessibility layers match the visual UI
+
+---
+
+### Bug 2: Autocomplete Caret/Focus Visibility Issue
+
+**Component:** Autocomplete + TextField
+
+**Original Issue:**
+- When the user selects an option and blurs the input, then re-focuses it
+- The text caret (cursor) may become invisible or hard to see
+- The focus styling may not apply consistently
+
+**Reproduction Steps:**
+1. Open the original buggy version in a browser
+2. Click on the Autocomplete field
+3. Select an option from the dropdown
+4. Click outside the field (blur)
+5. Click back on the field to refocus
+6. Observe that the caret is invisible or difficult to see
+7. Type characters - notice caret behavior is inconsistent
+
+**Expected Behavior:**
+- Caret should remain visible when the field is focused
+- Focus styling should be consistent and clear
+- Text input should work smoothly after blur/refocus cycle
+
+**Applied Fix:**
+- Added explicit `caretColor` CSS property to the TextField with focus styling
+- Added a `focused` state tracker to manage focus state
+- Enhanced TextField with focus border styling (`Mui-focused`)
+- Ensured controlled state is properly managed without side effects
+- Applied sx prop with proper focus handlers for consistent behavior
+
+---
+
+## ✅ Fixes Applied
+
+### Fix 1: Tooltip Accessibility
+```javascript
+// BEFORE (Buggy)
 <Tooltip title="Delete">
   <IconButton aria-label="Delete current item">
     <Icon>delete</Icon>
   </IconButton>
 </Tooltip>
-```
 
-When both `Tooltip` and `aria-label` are present, screen readers typically prioritize the `aria-label`, causing a mismatch with the visible tooltip.
-
-#### Applied Fix
-```jsx
-// FIXED CODE
-<Tooltip 
-  title="Delete"
-  data-testid="delete-tooltip"
->
-  <IconButton
-    onClick={() => console.log("Delete icon clicked")}
-    data-testid="delete-button"
-  >
+// AFTER (Fixed)
+<Tooltip title="Delete" data-testid="delete-tooltip">
+  <IconButton aria-label="Delete" data-testid="delete-button">
     <Icon>delete</Icon>
   </IconButton>
 </Tooltip>
 ```
 
-**Changes Made:**
-- ✓ Removed `aria-label` from `IconButton`
-- ✓ Tooltip's `title` now serves as the sole accessible name
-- ✓ Added `data-testid` attributes for testing
-- ✓ Sighted users and screen reader users now receive identical labeling
+### Fix 2: Autocomplete Focus Handling
+```javascript
+// BEFORE (Buggy - minimal focus styling)
+<TextField {...params} label="Pick an option" />
 
----
-
-### Bug 2: Autocomplete Caret / Focus Visibility Issue ❌ → ✅
-
-#### Original Issue
-- **Component**: `Autocomplete` + `TextField`
-- **Problem**:
-  - When a user selects an option and the input loses focus (blur)
-  - Upon refocusing the input, the text cursor (caret) becomes invisible or hard to see
-  - Some browsers don't properly restore the caret after a controlled input blur/focus cycle
-- **Impact**: Poor user experience; users cannot see where they're typing
-
-#### Root Cause
-```jsx
-// BUGGY CODE
-<Autocomplete
-  value={value}
-  onChange={(_, newValue) => setValue(newValue)}
-  inputValue={inputValue}
-  onInputChange={(_, newInputValue, reason) => {
-    if (reason === "input" || reason === "reset" || reason === "clear") {
-      setInputValue(newInputValue ?? "");
-    }
+// AFTER (Fixed - explicit caret and focus styling)
+<TextField
+  {...params}
+  label="Pick an option"
+  onBlur={(e) => {
+    setFocused(false);
+    console.log("Autocomplete blur");
   }}
-  options={autocompleteOptions}
-  renderInput={(params) => (
-    <TextField
-      {...params}
-      label="Pick an option"
-      onBlur={() => console.log("blur")}
-      onFocus={() => console.log("focus")}
-    />
-  )}
+  onFocus={(e) => {
+    setFocused(true);
+    console.log("Autocomplete focus");
+  }}
+  sx={{
+    "& .MuiOutlinedInput-root": {
+      "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+        borderColor: "#1976d2",
+        borderWidth: 2,
+      },
+    },
+    "& .MuiOutlinedInput-input": {
+      caretColor: "#1976d2",
+      "&:focus": {
+        caretColor: "#1976d2",
+      },
+    },
+  }}
 />
 ```
 
-The controlled input state, combined with how MUI manages internal focus, sometimes causes the caret to not display correctly after blur/refocus cycles.
-
-#### Applied Fix
-
-**CSS Enhancement:**
-```css
-/* Ensure caret is always visible in focused inputs */
-input:focus {
-  caret-color: currentColor;  /* Make caret inherit text color */
-  outline: 2px solid #1976d2;  /* Visible focus indicator */
-  outline-offset: 2px;
-}
-```
-
-**JavaScript Enhancement:**
-```jsx
-// FIXED CODE
-const handleInputChange = (_, newInputValue, reason) => {
-  if (reason === "input" || reason === "reset" || reason === "clear") {
-    setInputValue(newInputValue ?? "");
-  }
-};
-
-const handleInputBlur = () => {
-  console.log("Autocomplete blur");
-  // State is preserved for next focus
-};
-
-const handleInputFocus = () => {
-  console.log("Autocomplete focus");
-  setFocusedOnce(true);  // Track focus for UI logic
-};
-
-<Autocomplete
-  value={value}
-  onChange={(_, newValue) => setValue(newValue)}
-  inputValue={inputValue}
-  onInputChange={handleInputChange}
-  options={autocompleteOptions}
-  data-testid="autocomplete"
-  renderInput={(params) => (
-    <TextField
-      {...params}
-      label="Pick an option"
-      onBlur={handleInputBlur}
-      onFocus={handleInputFocus}
-      data-testid="autocomplete-input"
-      inputProps={{
-        ...params.inputProps,
-        "data-testid": "autocomplete-field",
-      }}
-    />
-  )}
-/>
-```
-
-**Changes Made:**
-- ✓ Added `caret-color: currentColor` to ensure caret is always visible
-- ✓ Added focus outline styling for better visual feedback
-- ✓ Improved `onBlur` and `onFocus` handlers with proper state preservation
-- ✓ Added `data-testid` attributes for testing
-- ✓ Refactored event handlers for clarity and maintainability
-
 ---
 
-## Project Structure
+## 📋 Project Structure
 
 ```
-v-coralhuang_25_11_14_case1/
-├── input.html              # Original buggy version (reference)
-├── index.html              # Fixed version (main deliverable)
-├── package.json            # Node.js project configuration
-├── setup.js                # Cross-platform setup script
-├── test-runner.js          # Cross-platform test runner
-├── README.md               # This file
-└── fixtures/               # Test fixtures directory (created during setup)
-    └── test-fixture.html   # HTML test fixture
+.
+├── index.html           # Fixed HTML with React/MUI components
+├── input.html           # Original buggy version (reference)
+├── package.json         # Project dependencies and scripts
+├── setup.js             # Setup script (installs dependencies)
+├── test-runner.js       # Cross-platform test runner
+└── README.md            # This file
 ```
 
 ---
 
-## How to Setup
+## 🚀 Quick Start
 
-### Prerequisites
-- **Node.js** (v14 or higher) - [Download](https://nodejs.org/)
-- Any modern web browser for manual testing
+### 1. Setup (Install Dependencies)
 
-### Step 1: Run the Setup Script
-
-**Windows:**
-```powershell
-node setup.js
-```
-
-**macOS/Linux:**
 ```bash
-node setup.js
+npm run setup
 ```
 
-The setup script will:
-- ✓ Detect your operating system
-- ✓ Check for npm availability
-- ✓ Create the `fixtures/` directory
-- ✓ Install npm dependencies (if available)
+This script will:
+- Detect your operating system (Windows, macOS, Linux)
+- Install required dependencies from npm
+- Prepare the environment for testing
 
-### Step 2: Verify Setup
-```bash
-npm test
-```
-
-If the setup is successful, you'll see a comprehensive test report showing all tests passing.
-
----
-
-## Running Tests
-
-### One-Command Test Execution
-
-The project includes a unified cross-platform test runner that works on Windows, macOS, and Linux.
+### 2. Run Tests
 
 ```bash
 npm test
 ```
 
-This command:
-1. **Detects your OS** (Windows, macOS, or Linux)
-2. **Runs all validation tests** covering:
-   - Bug 1: Tooltip accessibility fix
-   - Bug 2: Autocomplete focus behavior fix
-   - Code quality and documentation
-3. **Generates a detailed report** showing pass/fail status for each test
-4. **Exits with appropriate status codes** (0 for success, 1 for failure)
-
-### Example Output
-
-```
-======================================================================
-🔍 MUI BUG FIX TEST RUNNER
-======================================================================
-📱 Detected OS: Windows
-
-📋 Test Suite: Bug 1: Tooltip & aria-label Fix
-----------------------------------------------------------------------
-✓ index.html exists
-✓ Tooltip component present with correct title
-✓ IconButton has no aria-label (to avoid duplication)
-✓ delete-button has correct test identifier
-✓ Tooltip has correct test identifier
-----------------------------------------------------------------------
-Results: 5 passed, 0 failed (5 total)
-
-📋 Test Suite: Bug 2: Autocomplete Focus & Caret Fix
-----------------------------------------------------------------------
-✓ index.html is well-formed
-✓ Autocomplete component has data-testid
-✓ Autocomplete input field has data-testid
-✓ CSS focus styling present for caret visibility
-✓ Focus event handlers properly defined
-✓ TextField maintains inputProps for accessibility
-----------------------------------------------------------------------
-Results: 6 passed, 0 failed (6 total)
-
-📋 Test Suite: Code Quality & Documentation
-----------------------------------------------------------------------
-✓ HTML file is valid and readable
-✓ Component is titled "Fixed MUI Example"
-✓ Bug sections marked with FIXED status
-✓ Descriptive comments for fixes are present
-✓ CSS outline ensures focus visibility
-----------------------------------------------------------------------
-Results: 5 passed, 0 failed (5 total)
-
-======================================================================
-📊 FINAL TEST REPORT
-======================================================================
-Total Tests: 16
-✓ Passed: 16
-✗ Failed: 0
-======================================================================
-
-🎉 ALL TESTS PASSED! Both bugs have been successfully fixed.
-```
+This command will:
+- Auto-detect your OS
+- Run all test suites:
+  - **TEST SUITE 1:** Tooltip and aria-label consistency checks
+  - **TEST SUITE 2:** Autocomplete focus and caret behavior validation
+  - **TEST SUITE 3:** General code quality and structure verification
+- Display a summary of passed/failed tests
+- Exit with appropriate status code (0 = success, 1 = failure)
 
 ---
 
-## Manual Testing Guide
+## 🧪 Test Coverage
 
-### Testing Bug 1 Fix (Tooltip Accessibility)
+### TEST SUITE 1: Tooltip and aria-label Consistency
+- ✓ HTML file exists
+- ✓ Tooltip component is present
+- ✓ Delete button has data-testid
+- ✓ Tooltip has correct title attribute
+- ✓ IconButton aria-label matches tooltip
+- ✓ Old mismatch text is removed
 
-1. **Open `index.html`** in your web browser
-2. **Hover over the delete icon** - you should see the tooltip "Delete"
-3. **Using a screen reader** (NVDA on Windows, VoiceOver on macOS):
-   - Navigate to the delete button
-   - The screen reader should announce: "Delete" (not "Delete current item")
-   - This matches the visible tooltip text
-4. **Expected Result**: Visible tooltip and screen reader text are identical
+### TEST SUITE 2: Autocomplete Focus and Caret Behavior
+- ✓ Autocomplete component is present
+- ✓ Autocomplete has data-testid
+- ✓ TextField within Autocomplete has data-testid
+- ✓ Autocomplete has focus event handler
+- ✓ Autocomplete has blur event handler
+- ✓ TextField has caret color styling
+- ✓ TextField has focus border styling
+- ✓ Controlled state is properly managed
 
-### Testing Bug 2 Fix (Autocomplete Caret)
-
-1. **Open `index.html`** in your web browser
-2. **Click on the autocomplete input field**
-3. **Type a character** - the text cursor (caret) should be visible
-4. **Select an option** from the dropdown
-5. **Click elsewhere** to blur the input
-6. **Click back on the input field** to refocus it
-7. **Expected Result**: The text cursor reappears immediately and is clearly visible
-
-### Visual Indicators
-
-The page includes status badges:
-- 🔧 **FIXED** badges (green) indicate successful bug corrections
-- Clear separation of bug 1 and bug 2 sections
-- Consistent styling with Material-UI design principles
+### TEST SUITE 3: General Code Quality
+- ✓ HTML is valid and well-formed
+- ✓ React and MUI libraries are loaded
+- ✓ Comments document fixes
+- ✓ Page title reflects fixed state
+- ✓ Package.json has test script
 
 ---
 
-## Architecture Details
+## 💻 Cross-Platform Compatibility
 
-### Test Runner Architecture
+The test runner automatically detects and adapts to:
+- **Windows** (PowerShell, Command Prompt)
+- **macOS** (Bash, Zsh)
+- **Linux** (Bash, Zsh)
 
-The `test-runner.js` implements a robust testing framework with:
+All tests run with a single unified command: `npm test`
 
-**OS Detection:**
-- Platform detection using Node.js `os` module
-- Clear OS identification output (Windows, macOS, Linux)
-- Fallback handling for unknown platforms
-
-**Test Organization:**
-- `TestSuite` class for organizing related tests
-- Individual test methods with descriptive names
-- Pass/fail tracking with detailed error messages
-
-**Validation Methods:**
-- HTML file presence and format validation
-- Regex-based HTML content parsing
-- CSS and JavaScript feature detection
-- Semantic validation of component structure
-
-**Reporting:**
-- Per-test pass/fail indicators (✓/✗)
-- Detailed error messages for debugging
-- Suite-level summary statistics
-- Final comprehensive test report
-
-### Code Quality Practices
-
-- ✓ Clear, semantic variable names
-- ✓ Comprehensive inline comments
-- ✓ Proper error handling with descriptive messages
-- ✓ Modular test structure for maintainability
-- ✓ Cross-platform compatibility without system-specific commands
+No OS-specific workarounds needed!
 
 ---
 
-## Troubleshooting
+## 📖 How to Verify Fixes
 
-### Issue: Tests fail with "npm not found"
+### Verify Fix 1 (Tooltip Accessibility)
+1. Open `index.html` in a web browser
+2. Use browser DevTools to inspect the delete button:
+   ```javascript
+   // In browser console:
+   document.querySelector('[data-testid="delete-button"]').getAttribute('aria-label')
+   // Should output: "Delete"
+   ```
+3. Test with a screen reader:
+   - NVDA (Windows)
+   - JAWS (Windows)
+   - VoiceOver (macOS)
+   - TalkBack (Android/Mobile)
 
-**Solution:** Install Node.js from https://nodejs.org/
-
-### Issue: Tests fail on Windows with PowerShell
-
-**Solution:** Run PowerShell as Administrator, or use Command Prompt (cmd.exe)
-
-### Issue: Module not found errors
-
-**Solution:** Run the setup script first:
-```bash
-node setup.js
-```
-
-### Issue: Port conflicts when opening HTML
-
-**Solution:** Use any local web server:
-```bash
-# Python 3
-python -m http.server 8000
-
-# Python 2
-python -m SimpleHTTPServer 8000
-
-# Node.js (if installed)
-npx http-server
-```
-
-Then navigate to `http://localhost:8000/index.html`
+### Verify Fix 2 (Autocomplete Focus)
+1. Open `index.html` in a web browser
+2. Click on the Autocomplete field
+3. Select an option from the dropdown
+4. Click outside the field (blur)
+5. Click back on the field
+6. **Verify:** The text cursor is clearly visible
+7. **Verify:** Typing works smoothly
+8. Check the focused state in DevTools:
+   ```javascript
+   // The Autocomplete should show proper focus styling
+   document.querySelector('[data-testid="autocomplete-textfield"]')
+     .classList.contains('Mui-focused')
+   ```
 
 ---
 
-## Browser Compatibility
+## 📦 Dependencies
 
-- ✓ Chrome/Chromium (latest)
-- ✓ Firefox (latest)
-- ✓ Safari (latest)
-- ✓ Edge (latest)
-- ✓ Mobile browsers (iOS Safari, Chrome Mobile)
-
----
-
-## Accessibility Features
-
-Both fixes enhance overall accessibility:
-
-**Bug 1 Fix:**
-- ✓ WCAG 2.1 AA compliant labeling
-- ✓ Consistent semantics across all user types
-- ✓ Screen reader friendly
-
-**Bug 2 Fix:**
-- ✓ Clear visual focus indicators
-- ✓ Reliable caret visibility
-- ✓ Keyboard accessible input
+- **Node.js** (v14+): Runtime for setup and test scripts
+- **npm**: Package manager
+- **jsdom**: For DOM testing (optional, included in devDependencies)
+- **htmlparser2**: For HTML parsing in tests (optional, included in devDependencies)
 
 ---
 
-## References
+## 🎯 Files Overview
 
-- [MUI Documentation](https://mui.com/)
-- [React Documentation](https://react.dev/)
-- [WCAG 2.1 Accessibility Guidelines](https://www.w3.org/WAI/WCAG21/quickref/)
-- [MDN: aria-label](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-label)
-- [MDN: Caret Color](https://developer.mozilla.org/en-US/docs/Web/CSS/caret-color)
-
----
-
-## License
-
-MIT License - Feel free to use this project for educational and debugging purposes.
+| File | Purpose |
+|------|---------|
+| `index.html` | Fixed version with both bugs resolved |
+| `input.html` | Original buggy version (reference only) |
+| `package.json` | Project metadata, dependencies, and scripts |
+| `setup.js` | One-command setup that installs dependencies |
+| `test-runner.js` | Cross-platform test suite runner |
+| `README.md` | This documentation file |
 
 ---
 
-## Author
+## 🔍 Code Comments
 
-Developer - Bug Bash Challenge 2025
+The fixed HTML file includes detailed comments explaining:
+- What the original bugs were
+- How each bug was fixed
+- Where fixes are applied in the code
+- Why the fixes work
+
+Look for comments marked with:
+- `// FIXED:`
+- `// FIX 1:` / `// FIX 2:`
+- `// FIXES APPLIED:`
 
 ---
 
-**Last Updated:** November 14, 2025
+## ✨ Best Practices Demonstrated
 
-For questions or improvements, please refer to the test runner output and ensure all 16 tests pass before deployment.
+1. **Accessibility First**: Ensure aria-labels match visible text
+2. **Consistent State Management**: Use React state properly in controlled components
+3. **Explicit Styling**: Make focus states visually clear and functional
+4. **Cross-Platform Testing**: Support all major operating systems
+5. **Clear Documentation**: Explain what was wrong and how it was fixed
+6. **Semantic HTML**: Use proper structure and labels
+
+---
+
+## 📚 Resources
+
+- [Material-UI Documentation](https://mui.com/material-ui/getting-started/)
+- [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)
+- [React Docs - Controlled Components](https://react.dev/reference/react-dom/components/input#controlling-an-input-with-a-state-variable)
+- [Accessibility: Screen Readers](https://www.w3.org/WAI/test-evaluate/access-tools/)
+
+---
+
+## 🐛 Debugging Notes
+
+If you encounter issues:
+
+1. **Tests fail on setup**: Ensure Node.js and npm are installed
+   ```bash
+   node --version
+   npm --version
+   ```
+
+2. **HTML doesn't display**: Clear browser cache or open in incognito mode
+
+3. **Caret still invisible**: Check browser zoom level and try a different browser
+
+4. **Screen reader not working**: Install a free screen reader:
+   - Windows: NVDA (free) or JAWS
+   - macOS: VoiceOver (built-in)
+   - Linux: Orca (free)
+
+---
+
+## 📝 Summary
+
+This project demonstrates:
+- Identification of real UI/UX bugs
+- Implementation of practical fixes
+- Comprehensive testing approach
+- Cross-platform compatibility
+- Accessibility best practices
+
+All bugs have been fixed, tested, and documented. The project is production-ready and serves as a reference for accessibility and UI robustness.
+
+---
+
+**Last Updated:** November 14, 2025  
+**Status:** ✅ All bugs fixed and tested

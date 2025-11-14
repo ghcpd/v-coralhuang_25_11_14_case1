@@ -37,52 +37,20 @@
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
           sans-serif;
       }
-
-      /* Ensure caret is always visible in focused inputs */
-      input:focus {
-        caret-color: currentColor;
-        outline: 2px solid #1976d2;
-        outline-offset: 2px;
-      }
-
-      .bug-section {
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 16px;
-        background-color: #fafafa;
-      }
-
-      .status-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 12px;
-        font-size: 12px;
-        font-weight: 600;
-        margin-left: 8px;
-      }
-
-      .status-fixed {
-        background-color: #c8e6c9;
-        color: #2e7d32;
-      }
     </style>
   </head>
   <body>
     <div id="root"></div>
 
     <script type="text/babel">
-      // Fixed MUI Example
-      // This file contains fixed versions of two previously buggy UI components.
+      // This file contains fixed versions of two UI-related bugs.
+      // Original bugs were:
+      // BUG 1: Tooltip and aria-label semantics mismatch
+      // BUG 2: Autocomplete caret / focus visibility issue after blur
       //
-      // FIX 1: Tooltip and aria-label semantics now match
-      //   - Removed aria-label to avoid duplication
-      //   - Tooltip provides accessible name via title
-      //   - Screen readers and sighted users see the same text
-      //
-      // FIX 2: Autocomplete caret/focus visibility is now reliable
-      //   - Added CSS focus styling with caret-color
-      //   - Improved input blur/focus handlers with state preservation
-      //   - TextField now maintains proper focus indicators
+      // FIXES APPLIED:
+      // FIX 1: Changed aria-label to match tooltip text exactly ("Delete")
+      // FIX 2: Added proper focus styling for TextField and ensured controlled state handles focus correctly
 
       const {
         Box,
@@ -108,27 +76,7 @@
       function FixedMUIExample() {
         const [value, setValue] = React.useState(null);
         const [inputValue, setInputValue] = React.useState("");
-        const [focusedOnce, setFocusedOnce] = React.useState(false);
-
-        const handleInputChange = (_, newInputValue, reason) => {
-          if (
-            reason === "input" ||
-            reason === "reset" ||
-            reason === "clear"
-          ) {
-            setInputValue(newInputValue ?? "");
-          }
-        };
-
-        const handleInputBlur = () => {
-          console.log("Autocomplete blur");
-          // Ensure state is preserved
-        };
-
-        const handleInputFocus = () => {
-          console.log("Autocomplete focus");
-          setFocusedOnce(true);
-        };
+        const [focused, setFocused] = React.useState(false);
 
         return (
           <Box
@@ -147,34 +95,37 @@
                 Fixed MUI Example
               </Typography>
               <Typography variant="body1">
-                This page contains fixed versions of two previously buggy UI components:
-                a tooltip accessibility issue and an autocomplete caret/focus issue.
-                Both issues have been resolved with proper semantic HTML and focus management.
+                This page demonstrates two previously buggy UI components that
+                have now been fixed: a tooltip accessibility issue and an
+                autocomplete focus behavior issue.
               </Typography>
             </Box>
 
-            {/* FIXED BUG 1: Tooltip and aria-label consistency */}
-            <Box className="bug-section">
+            {/* FIX 1: Tooltip and aria-label now match */}
+            <Box
+              sx={{
+                border: "1px solid #ccc",
+                borderRadius: 2,
+                p: 2,
+              }}
+            >
               <Typography variant="h6" gutterBottom>
-                Bug 1: Tooltip and aria-label consistency
-                <span className="status-badge status-fixed">FIXED</span>
+                Fix 1: Tooltip and aria-label consistency
               </Typography>
               <Typography variant="body2" paragraph>
-                The icon button now uses a consistent accessible label. The Tooltip provides
-                the accessible name, and aria-label has been removed to avoid duplication.
-                Both screen readers and sighted users see the same label.
+                The icon button now uses both a tooltip and an aria-label that
+                match. Screen readers announce the same label as the visible
+                tooltip text.
               </Typography>
 
-              {/* Fixed implementation:
+              {/* FIXED: aria-label now matches tooltip title
                   - Tooltip title: "Delete"
-                  - No aria-label (Tooltip handles accessibility)
-                  - Visual tooltip and accessible name match
+                  - IconButton aria-label: "Delete" (FIXED from "Delete current item")
+                  Visual tooltip and accessible name now match.
               */}
-              <Tooltip 
-                title="Delete"
-                data-testid="delete-tooltip"
-              >
+              <Tooltip title="Delete" data-testid="delete-tooltip">
                 <IconButton
+                  aria-label="Delete"
                   onClick={() => {
                     console.log("Delete icon clicked");
                   }}
@@ -186,23 +137,27 @@
               </Tooltip>
             </Box>
 
-            {/* FIXED BUG 2: Autocomplete caret / focus behavior */}
-            <Box className="bug-section">
+            {/* FIX 2: Autocomplete with improved focus handling */}
+            <Box
+              sx={{
+                border: "1px solid #ccc",
+                borderRadius: 2,
+                p: 2,
+              }}
+            >
               <Typography variant="h6" gutterBottom>
-                Bug 2: Autocomplete caret / focus behavior
-                <span className="status-badge status-fixed">FIXED</span>
+                Fix 2: Autocomplete focus behavior
               </Typography>
               <Typography variant="body2" paragraph>
-                The Autocomplete now maintains proper caret visibility and focus behavior.
-                CSS styling ensures the caret is always visible when focused, and the
-                input field preserves its visual focus indicators during blur/refocus cycles.
+                This controlled Autocomplete now properly handles focus and blur
+                events. The caret remains visible and properly positioned when
+                the input regains focus after being blurred.
               </Typography>
 
-              {/* Fixed implementation:
-                  - Controlled value and inputValue with proper handlers
-                  - CSS focus styling ensures caret visibility
-                  - Proper onBlur/onFocus handlers that preserve state
-                  - TextField renders with proper focus indicators
+              {/* FIXED: Improved focus handling and TextField styling
+                  - Added focused state tracking
+                  - TextField now includes proper focus styling via sx prop
+                  - onInputChange properly manages state without side effects
               */}
               <Autocomplete
                 value={value}
@@ -210,42 +165,48 @@
                   setValue(newValue);
                 }}
                 inputValue={inputValue}
-                onInputChange={handleInputChange}
+                onInputChange={(_, newInputValue, reason) => {
+                  if (
+                    reason === "input" ||
+                    reason === "reset" ||
+                    reason === "clear"
+                  ) {
+                    setInputValue(newInputValue ?? "");
+                  }
+                }}
                 options={autocompleteOptions}
                 sx={{ width: 300 }}
-                data-testid="autocomplete"
+                data-testid="autocomplete-field"
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label="Pick an option"
-                    onBlur={handleInputBlur}
-                    onFocus={handleInputFocus}
-                    data-testid="autocomplete-input"
-                    inputProps={{
-                      ...params.inputProps,
-                      "data-testid": "autocomplete-field",
+                    onBlur={(e) => {
+                      setFocused(false);
+                      console.log("Autocomplete blur");
                     }}
+                    onFocus={(e) => {
+                      setFocused(true);
+                      console.log("Autocomplete focus");
+                    }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                          borderColor: "#1976d2",
+                          borderWidth: 2,
+                        },
+                      },
+                      "& .MuiOutlinedInput-input": {
+                        caretColor: "#1976d2",
+                        "&:focus": {
+                          caretColor: "#1976d2",
+                        },
+                      },
+                    }}
+                    data-testid="autocomplete-textfield"
                   />
                 )}
               />
-            </Box>
-
-            {/* Testing / Status section */}
-            <Box
-              sx={{
-                border: "2px solid #4caf50",
-                borderRadius: 2,
-                p: 2,
-                backgroundColor: "#f1f8e9",
-              }}
-            >
-              <Typography variant="h6" gutterBottom>
-                ✓ All Bugs Fixed
-              </Typography>
-              <Typography variant="body2">
-                This component is now accessible and provides consistent UI/UX behavior across all browsers and devices.
-                Both the Tooltip semantics and Autocomplete focus behavior have been validated and tested.
-              </Typography>
             </Box>
           </Box>
         );

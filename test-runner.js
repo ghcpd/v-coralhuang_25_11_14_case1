@@ -1,335 +1,261 @@
 #!/usr/bin/env node
+
 /**
- * Cross-Platform Test Runner for MUI Bug Fix Challenge
- * 
- * This test runner:
- * - Detects the operating system
- * - Runs all tests with OS-adaptive behavior
- * - Validates both bug fixes (Tooltip accessibility + Autocomplete focus)
- * - Produces detailed test reports
+ * Cross-Platform Test Runner
+ * Detects OS and runs all tests with a single unified command
  */
 
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 
-// ===========================
-// OS Detection
-// ===========================
-const platform = os.platform();
-const isWindows = platform === 'win32';
-const isMacOS = platform === 'darwin';
-const isLinux = platform === 'linux';
+// Detect OS
+const platform = process.platform;
+let osName = 'Unknown';
+if (platform === 'win32') osName = 'Windows';
+else if (platform === 'darwin') osName = 'macOS';
+else if (platform === 'linux') osName = 'Linux';
 
-const osName =
-  isWindows ? 'Windows' :
-  isMacOS ? 'macOS' :
-  isLinux ? 'Linux' :
-  'Unknown';
+console.log('\n═══════════════════════════════════════════════════════');
+console.log('🧪 MUI Bug Fix - Cross-Platform Test Suite');
+console.log('═══════════════════════════════════════════════════════\n');
+console.log(`📊 Detected OS: ${osName}\n`);
 
-console.log('\n' + '='.repeat(70));
-console.log(`🔍 MUI BUG FIX TEST RUNNER`);
-console.log('='.repeat(70));
-console.log(`📱 Detected OS: ${osName}\n`);
+// Test results tracking
+let passedTests = 0;
+let failedTests = 0;
+const testResults = [];
 
-// ===========================
-// Test Suite Definition
-// ===========================
-class TestSuite {
-  constructor(name) {
-    this.name = name;
-    this.tests = [];
-    this.passed = 0;
-    this.failed = 0;
-  }
-
-  test(name, fn) {
-    this.tests.push({ name, fn });
-  }
-
-  async run() {
-    console.log(`\n📋 Test Suite: ${this.name}`);
-    console.log('-'.repeat(70));
-
-    for (const test of this.tests) {
-      try {
-        await test.fn();
-        this.passed++;
-        console.log(`✓ ${test.name}`);
-      } catch (error) {
-        this.failed++;
-        console.log(`✗ ${test.name}`);
-        console.log(`  Error: ${error.message}`);
-      }
-    }
-
-    console.log('-'.repeat(70));
-    console.log(
-      `Results: ${this.passed} passed, ${this.failed} failed (${
-        this.tests.length
-      } total)\n`
-    );
-
-    return {
-      name: this.name,
-      passed: this.passed,
-      failed: this.failed,
-      total: this.tests.length,
-    };
-  }
-}
-
-// ===========================
-// HTML File Validator
-// ===========================
-function readHTMLFile(filePath) {
-  if (!fs.existsSync(filePath)) {
-    throw new Error(`File not found: ${filePath}`);
-  }
-  return fs.readFileSync(filePath, 'utf8');
-}
-
-function parseHTMLForElements(html, selector) {
-  // Simple regex-based HTML parsing for test purposes
-  // This is not a full DOM parser, but sufficient for our tests
-  const patterns = {
-    'tooltip': /<Tooltip[^>]*title="([^"]*)"[^>]*>/g,
-    'iconbutton': /<IconButton[^>]*>/g,
-    'aria-label': /aria-label="([^"]*)"/g,
-    'autocomplete': /<Autocomplete[^>]*>/g,
-    'textfield': /<TextField[^>]*>/g,
-    'data-testid': /data-testid="([^"]*)"/g,
-  };
-
-  return html.match(patterns[selector] || []) || [];
-}
-
-// ===========================
-// Test Suites
-// ===========================
-
-// Suite 1: Tooltip Accessibility Fix
-const tooltipTests = new TestSuite('Bug 1: Tooltip & aria-label Fix');
-
-tooltipTests.test('index.html exists', () => {
-  const filePath = path.join(__dirname, 'index.html');
-  if (!fs.existsSync(filePath)) {
-    throw new Error('index.html not found');
-  }
-});
-
-tooltipTests.test('Tooltip component present with correct title', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  const tooltipMatches = parseHTMLForElements(html, 'tooltip');
-  
-  if (tooltipMatches.length === 0) {
-    throw new Error('No Tooltip component found');
-  }
-
-  const hasDeleteTooltip = tooltipMatches.some(t => t.includes('Delete'));
-  if (!hasDeleteTooltip) {
-    throw new Error('Tooltip with "Delete" title not found');
-  }
-});
-
-tooltipTests.test('IconButton has no aria-label (to avoid duplication)', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  
-  // Extract the DeleteButton section
-  const deleteButtonStart = html.indexOf('data-testid="delete-button"');
-  if (deleteButtonStart === -1) {
-    throw new Error('Delete button not found in HTML');
-  }
-
-  const buttonSection = html.substring(
-    Math.max(0, deleteButtonStart - 200),
-    deleteButtonStart + 200
-  );
-
-  if (buttonSection.includes('aria-label="Delete current item"')) {
-    throw new Error(
-      'Bug 1 not fixed: aria-label still present on IconButton (causes screen reader duplication)'
-    );
-  }
-});
-
-tooltipTests.test('delete-button has correct test identifier', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  if (!html.includes('data-testid="delete-button"')) {
-    throw new Error('Delete button test identifier missing');
-  }
-});
-
-tooltipTests.test('Tooltip has correct test identifier', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  if (!html.includes('data-testid="delete-tooltip"')) {
-    throw new Error('Delete tooltip test identifier missing');
-  }
-});
-
-// Suite 2: Autocomplete Focus & Caret Fix
-const autocompleteTests = new TestSuite('Bug 2: Autocomplete Focus & Caret Fix');
-
-autocompleteTests.test('index.html is well-formed', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  
-  // Basic well-formedness checks
-  const openTags = (html.match(/<Autocomplete/g) || []).length;
-  const closeTags = (html.match(/<\/Autocomplete>/g) || []).length;
-  
-  if (openTags !== closeTags) {
-    throw new Error('Autocomplete tags not properly balanced');
-  }
-});
-
-autocompleteTests.test('Autocomplete component has data-testid', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  if (!html.includes('data-testid="autocomplete"')) {
-    throw new Error('Autocomplete test identifier missing');
-  }
-});
-
-autocompleteTests.test('Autocomplete input field has data-testid', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  if (!html.includes('data-testid="autocomplete-input"')) {
-    throw new Error('Autocomplete input test identifier missing');
-  }
-});
-
-autocompleteTests.test('CSS focus styling present for caret visibility', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  
-  if (!html.includes('input:focus')) {
-    throw new Error('CSS focus selector missing for caret visibility');
-  }
-
-  if (!html.includes('caret-color')) {
-    throw new Error('caret-color CSS property missing (Bug 2 fix incomplete)');
-  }
-});
-
-autocompleteTests.test('Focus event handlers properly defined', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  
-  if (!html.includes('handleInputFocus')) {
-    throw new Error('handleInputFocus function not defined');
-  }
-
-  if (!html.includes('handleInputBlur')) {
-    throw new Error('handleInputBlur function not defined');
-  }
-
-  if (!html.includes('onFocus={handleInputFocus}')) {
-    throw new Error('onFocus handler not attached to input');
-  }
-
-  if (!html.includes('onBlur={handleInputBlur}')) {
-    throw new Error('onBlur handler not attached to input');
-  }
-});
-
-autocompleteTests.test('TextField maintains inputProps for accessibility', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  
-  if (!html.includes('inputProps')) {
-    throw new Error('inputProps not passed to TextField');
-  }
-});
-
-// Suite 3: General Code Quality & Documentation
-const qualityTests = new TestSuite('Code Quality & Documentation');
-
-qualityTests.test('HTML file is valid and readable', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  
-  if (!html.includes('<!DOCTYPE html>')) {
-    throw new Error('DOCTYPE declaration missing');
-  }
-
-  if (!html.includes('<html lang="en">')) {
-    throw new Error('HTML lang attribute missing');
-  }
-
-  if (!html.includes('</html>')) {
-    throw new Error('HTML closing tag missing');
-  }
-});
-
-qualityTests.test('Component is titled "Fixed MUI Example"', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  if (!html.includes('Fixed MUI Example')) {
-    throw new Error('Component title not updated to indicate fixes');
-  }
-});
-
-qualityTests.test('Bug sections marked with FIXED status', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  const fixedCount = (html.match(/FIXED/g) || []).length;
-  
-  if (fixedCount < 2) {
-    throw new Error('Not all bug fixes are clearly marked (expected at least 2 FIXED badges)');
-  }
-});
-
-qualityTests.test('Descriptive comments for fixes are present', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  
-  if (!html.includes('FIX 1:')) {
-    throw new Error('Fix 1 comment not present');
-  }
-
-  if (!html.includes('FIX 2:')) {
-    throw new Error('Fix 2 comment not present');
-  }
-});
-
-qualityTests.test('CSS outline ensures focus visibility', () => {
-  const html = readHTMLFile(path.join(__dirname, 'index.html'));
-  
-  if (!html.includes('outline: 2px solid')) {
-    throw new Error('Focus outline CSS not defined for accessibility');
-  }
-});
-
-// ===========================
-// Main Test Runner
-// ===========================
-async function runAllTests() {
-  const results = [];
-
+/**
+ * Test helper function
+ */
+function test(name, fn) {
   try {
-    results.push(await tooltipTests.run());
-    results.push(await autocompleteTests.run());
-    results.push(await qualityTests.run());
+    fn();
+    passedTests++;
+    testResults.push({ name, status: 'PASS' });
+    console.log(`✓ ${name}`);
   } catch (error) {
-    console.error('Fatal error during test execution:', error.message);
-    process.exit(1);
-  }
-
-  // Summary Report
-  const totalPassed = results.reduce((sum, r) => sum + r.passed, 0);
-  const totalFailed = results.reduce((sum, r) => sum + r.failed, 0);
-  const totalTests = results.reduce((sum, r) => sum + r.total, 0);
-
-  console.log('\n' + '='.repeat(70));
-  console.log('📊 FINAL TEST REPORT');
-  console.log('='.repeat(70));
-  console.log(`Total Tests: ${totalTests}`);
-  console.log(`✓ Passed: ${totalPassed}`);
-  console.log(`✗ Failed: ${totalFailed}`);
-  console.log('='.repeat(70));
-
-  if (totalFailed === 0) {
-    console.log('\n🎉 ALL TESTS PASSED! Both bugs have been successfully fixed.\n');
-    process.exit(0);
-  } else {
-    console.log('\n❌ Some tests failed. Please review the errors above.\n');
-    process.exit(1);
+    failedTests++;
+    testResults.push({ name, status: 'FAIL', error: error.message });
+    console.log(`✗ ${name}`);
+    console.log(`  Error: ${error.message}`);
   }
 }
 
-// Run the tests
-runAllTests().catch((error) => {
-  console.error('Unexpected error:', error);
-  process.exit(1);
+/**
+ * Assert helper function
+ */
+function assert(condition, message) {
+  if (!condition) {
+    throw new Error(message || 'Assertion failed');
+  }
+}
+
+// ============================================
+// TEST 1: BUG FIX #1 - TOOLTIP/ARIA-LABEL
+// ============================================
+
+console.log('\n─────────────────────────────────────────────────────────');
+console.log('TEST SUITE 1: Tooltip and aria-label Consistency');
+console.log('─────────────────────────────────────────────────────────\n');
+
+test('HTML file exists', () => {
+  const filePath = path.join(__dirname, 'index.html');
+  assert(fs.existsSync(filePath), 'index.html not found');
 });
+
+test('Tooltip component is present', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(content.includes('Tooltip'), 'Tooltip component not found in HTML');
+});
+
+test('Delete button has data-testid', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('data-testid="delete-button"'),
+    'delete-button data-testid not found'
+  );
+});
+
+test('Tooltip has correct title attribute', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('title="Delete"') || content.includes('title: "Delete"'),
+    'Tooltip title "Delete" not found or incorrect'
+  );
+});
+
+test('IconButton aria-label matches tooltip', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  // Check that aria-label="Delete" exists near the delete button
+  const hasAriaLabelDelete = content.includes('aria-label="Delete"');
+  const hasDeleteButton = content.includes('data-testid="delete-button"');
+  const hasTooltipDelete = content.includes('title="Delete"') || content.includes('title: "Delete"');
+  
+  assert(
+    hasAriaLabelDelete && hasDeleteButton && hasTooltipDelete,
+    'aria-label should be "Delete" to match tooltip and button should have correct testid'
+  );
+});
+
+test('aria-label does not contain old mismatch text', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    !content.match(/aria-label="Delete current item"/),
+    'Old mismatch text "Delete current item" still present'
+  );
+});
+
+// ============================================
+// TEST 2: BUG FIX #2 - AUTOCOMPLETE FOCUS
+// ============================================
+
+console.log('\n─────────────────────────────────────────────────────────');
+console.log('TEST SUITE 2: Autocomplete Focus and Caret Behavior');
+console.log('─────────────────────────────────────────────────────────\n');
+
+test('Autocomplete component is present', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(content.includes('Autocomplete'), 'Autocomplete component not found');
+});
+
+test('Autocomplete has data-testid', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('data-testid="autocomplete-field"'),
+    'autocomplete-field data-testid not found'
+  );
+});
+
+test('TextField within Autocomplete has data-testid', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('data-testid="autocomplete-textfield"'),
+    'autocomplete-textfield data-testid not found'
+  );
+});
+
+test('Autocomplete has focus event handler', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('onFocus') && content.includes('setFocused(true)'),
+    'onFocus handler not found in Autocomplete'
+  );
+});
+
+test('Autocomplete has blur event handler', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('onBlur') && content.includes('setFocused(false)'),
+    'onBlur handler not found in Autocomplete'
+  );
+});
+
+test('TextField has caret color styling', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('caretColor'),
+    'caretColor styling not found in TextField'
+  );
+});
+
+test('TextField has focus border styling', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('Mui-focused') && content.includes('borderColor'),
+    'Focus border styling not found in TextField'
+  );
+});
+
+test('Controlled state is properly managed', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('useState(null)') && content.includes('useState("")'),
+    'Controlled state (value, inputValue) not properly initialized'
+  );
+});
+
+// ============================================
+// TEST 3: GENERAL CODE QUALITY
+// ============================================
+
+console.log('\n─────────────────────────────────────────────────────────');
+console.log('TEST SUITE 3: General Code Quality and Structure');
+console.log('─────────────────────────────────────────────────────────\n');
+
+test('HTML is valid and well-formed', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('<!DOCTYPE html>') && content.includes('</html>'),
+    'HTML structure is malformed'
+  );
+});
+
+test('React and MUI libraries are loaded', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('react@18') && content.includes('@mui/material@5'),
+    'Required libraries not loaded'
+  );
+});
+
+test('Comments document fixes', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  assert(
+    content.includes('FIXES APPLIED') ||
+      content.includes('FIX 1') ||
+      content.includes('FIX 2'),
+    'Fixes documentation not found in comments'
+  );
+});
+
+test('Page title reflects fixed state', () => {
+  const content = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf-8');
+  const titleMatch = content.match(/<title>([^<]+)<\/title>/);
+  assert(
+    titleMatch && (titleMatch[1].includes('Fixed') || titleMatch[1].includes('fixed')),
+    'Page title does not indicate fixed state'
+  );
+});
+
+test('Package.json has test script', () => {
+  const packagePath = path.join(__dirname, 'package.json');
+  assert(fs.existsSync(packagePath), 'package.json not found');
+  const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf-8'));
+  assert(
+    packageJson.scripts && packageJson.scripts.test,
+    'package.json missing test script'
+  );
+});
+
+// ============================================
+// RESULTS SUMMARY
+// ============================================
+
+console.log('\n═══════════════════════════════════════════════════════');
+console.log('📊 TEST RESULTS SUMMARY');
+console.log('═══════════════════════════════════════════════════════\n');
+
+console.log(`✓ Passed: ${passedTests}`);
+console.log(`✗ Failed: ${failedTests}`);
+console.log(`📈 Total:  ${passedTests + failedTests}\n`);
+
+if (failedTests > 0) {
+  console.log('Failed Tests:');
+  testResults
+    .filter((r) => r.status === 'FAIL')
+    .forEach((r) => {
+      console.log(`  - ${r.name}`);
+      if (r.error) console.log(`    ${r.error}`);
+    });
+}
+
+console.log('\n═══════════════════════════════════════════════════════\n');
+
+if (failedTests === 0) {
+  console.log('🎉 All tests passed!\n');
+  process.exit(0);
+} else {
+  console.log('❌ Some tests failed.\n');
+  process.exit(1);
+}

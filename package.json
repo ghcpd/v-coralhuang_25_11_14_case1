@@ -1,7 +1,7 @@
 {
-  "name": "mui-bugfix-challenge",
+  "name": "mui-bug-fix-project",
   "version": "1.0.0",
-  "description": "Fixed MUI UI components with accessibility and focus behavior corrections",
+  "description": "Fixed MUI UI bugs project with comprehensive tests",
   "main": "index.html",
   "scripts": {
     "test": "node test-runner.js",
@@ -9,16 +9,11 @@
   },
   "keywords": [
     "mui",
+    "react",
     "accessibility",
-    "testing",
-    "ui-bugs",
-    "react"
+    "bug-fix"
   ],
-  "author": "Developer",
+  "author": "",
   "license": "MIT",
-  "devDependencies": {
-    "@testing-library/dom": "^9.3.4",
-    "jsdom": "^22.1.0",
-    "happy-dom": "^12.10.3"
-  }
+  "devDependencies": {}
 }
