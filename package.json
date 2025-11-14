@@ -1,0 +1,15 @@
+{
+  "name": "v-coralhuang_25_11_14_case1",
+  "version": "1.0.0",
+  "description": "Debugging task: fix Tooltip aria mismatch and Autocomplete caret issue",
+  "scripts": {
+    "test": "node test-runner.js",
+    "setup": "node setup.js"
+  },
+  "devDependencies": {
+    "puppeteer": "^20.11.0"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}
