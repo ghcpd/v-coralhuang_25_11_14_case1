@@ -1,0 +1,12 @@
+{
+  "name": "mui-debug-challenge",
+  "version": "1.0.0",
+  "description": "Bug Bash challenge covering tooltip semantics and autocomplete focus behavior",
+  "scripts": {
+    "setup": "node setup.js",
+    "test": "node test-runner.js"
+  },
+  "devDependencies": {
+    "puppeteer": "^21.0.1"
+  }
+}
