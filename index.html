@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Buggy MUI Example (HTML, Stable Version)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Material Icons font for <Icon> component -->
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+    />
+
+    <!-- React 18 -->
+    <script
+      crossorigin
+      src="https://unpkg.com/react@18/umd/react.development.js"
+    ></script>
+    <script
+      crossorigin
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+    ></script>
+
+    <!-- Emotion (required by MUI) -->
+    <script src="https://unpkg.com/@emotion/react@11/dist/emotion-react.umd.min.js"></script>
+    <script src="https://unpkg.com/@emotion/styled@11/dist/emotion-styled.umd.min.js"></script>
+
+    <!-- MUI v5 UMD (core only, no icons-material UMD) -->
+    <script src="https://unpkg.com/@mui/material@5/umd/material-ui.development.js"></script>
+
+    <!-- Babel: compile JSX in the browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      // This file documents and fixes two UI-related issues that were previously
+      // present in the tooltip semantics and autocomplete focus flow.
+
+      const {
+        Box,
+        Typography,
+        Tooltip,
+        IconButton,
+        Icon,
+        Autocomplete,
+        TextField,
+        CssBaseline,
+        ThemeProvider,
+        createTheme,
+      } = MaterialUI;
+
+      const deleteActionLabel = "Delete current item";
+
+      const autocompleteOptions = [
+        "Option A",
+        "Option B",
+        "Option C",
+        "Option D",
+        "Option E",
+      ];
+
+      function BuggyMUIExample() {
+        const [value, setValue] = React.useState(null);
+        const [inputValue, setInputValue] = React.useState("");
+        const inputRef = React.useRef(null);
+
+        const moveCaretToEnd = () => {
+          const inputNode = inputRef.current;
+          if (!inputNode || typeof inputNode.setSelectionRange !== "function") {
+            return;
+          }
+          const length = inputNode.value ? inputNode.value.length : 0;
+          const applyCaretMove = () => {
+            inputNode.setSelectionRange(length, length);
+          };
+
+          if (
+            typeof window !== "undefined" &&
+            typeof window.requestAnimationFrame === "function"
+          ) {
+            window.requestAnimationFrame(applyCaretMove);
+          } else {
+            setTimeout(applyCaretMove, 0);
+          }
+        };
+
+        return (
+          <Box
+            sx={{
+              p: 4,
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+              maxWidth: 600,
+              margin: "0 auto",
+            }}
+          >
+            {/* Page description section */}
+            <Box>
+              <Typography variant="h4" gutterBottom>
+                Buggy MUI Example
+              </Typography>
+              <Typography variant="body1">
+                This page intentionally contains two UI-related bugs: a tooltip
+                accessibility issue and an autocomplete caret/focus issue. It is
+                designed as a debugging exercise for an agent.
+              </Typography>
+            </Box>
+
+            {/* BUG 1: Tooltip and aria-label mismatch */}
+            <Box
+              sx={{
+                border: "1px solid #ccc",
+                borderRadius: 2,
+                p: 2,
+              }}
+            >
+              <Typography variant="h6" gutterBottom>
+                Bug 1: Tooltip and aria-label mismatch
+              </Typography>
+              <Typography variant="body2" paragraph>
+                The icon button below now shares the same accessible name for the
+                tooltip and the aria-label, ensuring screen-readers hear the same
+                label that is visible on screen.
+              </Typography>
+
+              <Tooltip title={deleteActionLabel}>
+                <IconButton
+                  aria-label={deleteActionLabel}
+                  onClick={() => {
+                    console.log("Delete icon clicked");
+                  }}
+                >
+                  {/* Using the core <Icon> component with Material Icons font */}
+                  <Icon>delete</Icon>
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            {/* BUG 2: Autocomplete caret / focus issue */}
+            <Box
+              sx={{
+                border: "1px solid #ccc",
+                borderRadius: 2,
+                p: 2,
+              }}
+            >
+              <Typography variant="h6" gutterBottom>
+                Bug 2: Autocomplete caret / focus behavior
+              </Typography>
+              <Typography variant="body2" paragraph>
+                This controlled Autocomplete keeps the caret visible when
+                the input regains focus by explicitly placing the cursor at the
+                end of the current text.
+              </Typography>
+
+              <Autocomplete
+                value={value}
+                onChange={(_, newValue) => {
+                  setValue(newValue);
+                }}
+                inputValue={inputValue}
+                onInputChange={(_, newInputValue, reason) => {
+                  if (
+                    reason === "input" ||
+                    reason === "reset" ||
+                    reason === "clear"
+                  ) {
+                    setInputValue(newInputValue ?? "");
+                  }
+                }}
+                options={autocompleteOptions}
+                sx={{ width: 300 }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Pick an option"
+                    onBlur={() => {
+                      console.log("Autocomplete blur");
+                    }}
+                    onFocus={() => {
+                      console.log("Autocomplete focus");
+                      moveCaretToEnd();
+                    }}
+                    inputRef={inputRef}
+                  />
+                )}
+              />
+            </Box>
+          </Box>
+        );
+      }
+
+      const theme = createTheme();
+
+      const rootElement = document.getElementById("root");
+      const root = ReactDOM.createRoot(rootElement);
+
+      root.render(
+        <React.StrictMode>
+          <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <BuggyMUIExample />
+          </ThemeProvider>
+        </React.StrictMode>
+      );
+    </script>
+  </body>
+</html>
