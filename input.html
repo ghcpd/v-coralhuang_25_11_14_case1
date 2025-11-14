@@ -30,6 +30,7 @@
 
     <!-- Babel: compile JSX in the browser -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script type="module" src="./app-shared.js"></script>
 
     <style>
       body {
@@ -74,6 +75,17 @@
         createTheme,
       } = MaterialUI;
 
+      const sharedUtils = window.AppShared;
+      if (!sharedUtils) {
+        throw new Error("Shared UI helpers failed to load.");
+      }
+
+      const {
+        deleteActionLabel,
+        shouldSyncInputValue,
+        restoreCaretOnFocus,
+      } = sharedUtils;
+
       const autocompleteOptions = [
         "Option A",
         "Option B",
@@ -85,6 +97,7 @@
       function BuggyMUIExample() {
         const [value, setValue] = React.useState(null);
         const [inputValue, setInputValue] = React.useState("");
+        const autocompleteInputRef = React.useRef(null);
 
         return (
           <Box
@@ -131,9 +144,9 @@
                   - IconButton aria-label: "Delete current item"
                   Visual tooltip vs. accessible name do not match.
               */}
-              <Tooltip title="Delete">
+              <Tooltip title={deleteActionLabel}>
                 <IconButton
-                  aria-label="Delete current item"
+                  aria-label={deleteActionLabel}
                   onClick={() => {
                     console.log("Delete icon clicked");
                   }}
@@ -172,28 +185,43 @@
                 }}
                 inputValue={inputValue}
                 onInputChange={(_, newInputValue, reason) => {
-                  if (
-                    reason === "input" ||
-                    reason === "reset" ||
-                    reason === "clear"
-                  ) {
+                  if (shouldSyncInputValue(reason)) {
                     setInputValue(newInputValue ?? "");
                   }
                 }}
                 options={autocompleteOptions}
                 sx={{ width: 300 }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Pick an option"
-                    onBlur={() => {
-                      console.log("Autocomplete blur");
-                    }}
-                    onFocus={() => {
-                      console.log("Autocomplete focus");
-                    }}
-                  />
-                )}
+                renderInput={(params) => {
+                  const inputProps = params.inputProps ?? {};
+                  return (
+                    <TextField
+                      {...params}
+                      label="Pick an option"
+                      inputRef={autocompleteInputRef}
+                      inputProps={{
+                        ...inputProps,
+                        ref: (node) => {
+                          autocompleteInputRef.current = node;
+                          const originalRef = inputProps.ref;
+                          if (typeof originalRef === "function") {
+                            originalRef(node);
+                          } else if (originalRef && "current" in originalRef) {
+                            originalRef.current = node;
+                          }
+                        },
+                        onBlur: (event) => {
+                          inputProps.onBlur?.(event);
+                          console.log("Autocomplete blur");
+                        },
+                        onFocus: (event) => {
+                          inputProps.onFocus?.(event);
+                          restoreCaretOnFocus(event.target);
+                          console.log("Autocomplete focus");
+                        },
+                      }}
+                    />
+                  );
+                }}
               />
             </Box>
           </Box>
