@@ -1,0 +1,24 @@
+{
+  "name": "v-coralhuang_25_11_14_case1",
+  "version": "1.0.0",
+  "description": "Self-contained UI debugging exercise with automated checks.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node run-tests.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghcpd/v-coralhuang_25_11_14_case1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ghcpd/v-coralhuang_25_11_14_case1/issues"
+  },
+  "homepage": "https://github.com/ghcpd/v-coralhuang_25_11_14_case1#readme",
+  "devDependencies": {
+    "vitest": "^4.0.8"
+  }
+}
