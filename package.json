@@ -1,0 +1,19 @@
+{
+  "name": "mui-bug-fix-project",
+  "version": "1.0.0",
+  "description": "Fixed MUI UI bugs project with comprehensive tests",
+  "main": "index.html",
+  "scripts": {
+    "test": "node test-runner.js",
+    "setup": "node setup.js"
+  },
+  "keywords": [
+    "mui",
+    "react",
+    "accessibility",
+    "bug-fix"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {}
+}
